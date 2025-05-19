@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список задач</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Список задач</h1>
+        <input type="text" id="taskInput" placeholder="Введите задачу">
+        <button onclick="addTask()">Добавить</button>
+        <ul id="taskList"></ul>
+    </div>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Применение темы Telegram
+        const telegram = window.Telegram.WebApp;
+        telegram.ready();
+        document.body.style.backgroundColor = telegram.themeParams.bg_color || '#ffffff';
+        document.body.style.color = telegram.themeParams.text_color || '#000000';
+
+        // Хранение задач (в памяти; для постоянства нужен бэкэнд)
+        let tasks = [];
+
+        // Добавление задачи
+        function addTask() {
+            const taskInput = document.getElementById('taskInput');
+            const taskText = taskInput.value.trim();
+            if (taskText) {
+                const taskId = Date.now();
+                tasks.push({ id: taskId, text: taskText });
+                taskInput.value = '';
+                renderTasks();
+                // Уведомление бота (опционально)
+                telegram.sendData(JSON.stringify({ action: 'add', task: taskText }));
+            }
+        }
+
+        // Удаление задачи
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            renderTasks();
+            telegram.sendData(JSON.stringify({ action: 'delete', taskId: id }));
+        }
+
+        // Отрисовка задач
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    ${task.text}
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">Удалить</button>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        // Обработка данных от бота (если бот отправляет начальные задачи)
+        telegram.onEvent('mainButtonClicked', () => {
+            telegram.sendData(JSON.stringify({ action: 'get_tasks' }));
+        });
+
+        // Развертывание приложения на всю высоту
+        telegram.expand();
+    </script>
+</body>
+</html>
